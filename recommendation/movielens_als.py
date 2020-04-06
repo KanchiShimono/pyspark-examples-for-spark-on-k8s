@@ -4,6 +4,9 @@
 # # PySpark MovieLens Recommendation by ALS
 
 # %%
+import urllib
+import zipfile
+
 import pandas as pd
 import pyspark.sql.functions as F
 from pyspark.ml.evaluation import RegressionEvaluator
@@ -14,6 +17,18 @@ from pyspark.sql import Row, SparkSession
 
 # %% [markdown]
 # ## Utility関数定義
+
+# %%
+def download(url: str, dist: str) -> None:
+    b = urllib.request.urlopen(url).read()
+    with open(dist, 'wb') as f:
+        f.write(b)
+
+
+def extract(src: str, dist: str) -> None:
+    with zipfile.ZipFile(src) as z:
+        z.extractall(dist)
+
 
 # %%
 def parse_ratings(path: str) -> SDF:
@@ -79,7 +94,7 @@ spark = (
     .config('spark.history.ui.port', True)
     .config('spark.ui.enabled', True)
     .config('spark.ui.port', 4040)
-    .config('spark.driver.host', 'yhdqer9.notebook.svc.cluster.local')
+    .config('spark.driver.host', 'ofdg4da.notebook.svc.cluster.local')
     .config('spark.driver.port', 29413)
     .config('spark.executor.memory', '3G')
     .config('spark.executor.cores', 1)
@@ -96,7 +111,16 @@ spark = (
 spark
 
 # %% [markdown]
-# ## MovieLensデータセット読み込み
+# ## MovieLensデータセット
+# ### ダウンロード
+
+# %%
+URL = 'http://files.grouplens.org/datasets/movielens/ml-1m.zip'
+download(URL, '/home/work/ml-1m.zip')
+extract('/home/work/ml-1m.zip', '/home/work/')
+
+# %% [markdown]
+# ### 読み込み
 
 # %%
 ratings_df = pd_parse_ratings('/home/work/ml-1m/ratings.dat').repartition(10)
@@ -114,6 +138,7 @@ movies_df.toPandas()
 # %%
 train_df, test_df = ratings_df.randomSplit([0.6, 0.4], seed=12345)
 train_df.persist()
+movies_df.persist()
 
 # %% [markdown]
 # ## レコメンドモデル (ALS) 定義

@@ -4,6 +4,7 @@
 # # PySpark MovieLens Recommendation by ALS
 
 # %%
+import pandas as pd
 import pyspark.sql.functions as F
 from pyspark.ml.evaluation import RegressionEvaluator
 from pyspark.ml.recommendation import ALS
@@ -44,44 +45,51 @@ def parse_movies(path: str) -> SDF:
     return spark.createDataFrame(rdd)
 
 
+def pd_parse_ratings(path: str) -> SDF:
+    return spark.createDataFrame(
+        pd.read_csv(
+            path,
+            engine='python',
+            sep='::',
+            header=None,
+            names=['userId', 'movieId', 'rating', 'timestamp']))
+
+
+def pd_parse_movies(path: str) -> SDF:
+    return spark.createDataFrame(
+        pd.read_csv(
+            path,
+            engine='python',
+            sep='::',
+            header=None,
+            names=['movieId', 'title', 'genre']))
+
+
 # %%
 spark = (
     SparkSession
     .builder
-    .master('local[*]')
-    .appName('movielens_als')
-    .config('spark.executor.memory', '8G')
-    .config('spark.executor.cores', 2)
+    .master('k8s://https://kubernetes.default.svc.cluster.local:443')
+    .appName('spark_on_k8s')
+    .config('spark.kubernetes.container.image', 'kanchishimono/pyspark-worker:latest')
+    .config('spark.kubernetes.pyspark.pythonVersion', 3)
+    .config('spark.executor.instances', 2)
+    .config('spark.kubernetes.namespace', 'notebook')
+    .config('spark.port.maxRetries', 3)
+    .config('spark.history.ui.port', True)
+    .config('spark.ui.enabled', True)
+    .config('spark.ui.port', 4040)
+    .config('spark.driver.host', 'yhdqer9.notebook.svc.cluster.local')
+    .config('spark.driver.port', 29413)
+    .config('spark.executor.memory', '3G')
+    .config('spark.executor.cores', 1)
     .config('spark.default.parallelism', 10)
     .config('spark.sql.shuffle.partitions', 10)
-    .config('spark.executor.instances', 1)
+    .config('spark.eventLog.compress', True)
+    .config('spark.eventLog.enabled', True)
+    .config('spark.eventLog.dir', 'file:///tmp/spark-events')
     .getOrCreate()
 )
-# spark = (
-#     SparkSession
-#     .builder
-#     .master('k8s://https://kubernetes.default.svc.cluster.local:443')
-#     .appName('movielens_als')
-#     .appName('spakr_on_k8s')
-#     .config('spark.kubernetes.container.image', 'kanchishimono/pyspark-worker:latest')
-#     .config('spark.kubernetes.pyspark.pythonVersion', 3)
-#     .config('spark.executor.instances', 1)
-#     .config('spark.kubernetes.namespace', 'notebook')
-#     .config('spark.port.maxRetries', 3)
-#     .config('spark.history.ui.port', True)
-#     .config('spark.ui.enabled', True)
-#     .config('spark.ui.port', 4040)
-#     .config('spark.driver.host', 'jbxnfic.notebook.svc.cluster.local')
-#     .config('spark.driver.port', 29413)
-#     .config('spark.executor.memory', '1G')
-#     .config('spark.executor.cores', 1)
-#     .config('spark.default.parallelism', 10)
-#     .config('spark.sql.shuffle.partitions', 10)
-#     .config('spark.eventLog.compress', True)
-#     .config('spark.eventLog.enabled', True)
-#     .config('spark.eventLog.dir', 'file:///tmp/spark-events')
-#     .getOrCreate()
-# )
 
 
 # %%
@@ -91,8 +99,8 @@ spark
 # ## MovieLensデータセット読み込み
 
 # %%
-ratings_df = parse_ratings('/home/work/ml-1m/ratings.dat').repartition(10)
-movies_df = parse_movies('/home/work/ml-1m/movies.dat').repartition(10)
+ratings_df = pd_parse_ratings('/home/work/ml-1m/ratings.dat').repartition(10)
+movies_df = pd_parse_movies('/home/work/ml-1m/movies.dat').repartition(10)
 
 
 # %%
@@ -236,7 +244,7 @@ users.toPandas()
     )
     .join(movies_df, ['movieId'], 'inner')
     .orderBy(F.desc('rating'))
-    .toPandas()
+    .show(truncate=False)
 )
 
 

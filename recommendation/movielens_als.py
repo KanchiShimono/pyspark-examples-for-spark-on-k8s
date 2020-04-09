@@ -94,9 +94,11 @@ spark = (
     .config('spark.history.ui.port', True)
     .config('spark.ui.enabled', True)
     .config('spark.ui.port', 4040)
-    .config('spark.driver.host', 'ofdg4da.notebook.svc.cluster.local')
+    .config('spark.driver.host', 'bxk70o2.notebook.svc.cluster.local')
     .config('spark.driver.port', 29413)
-    .config('spark.executor.memory', '3G')
+    .config('spark.driver.memory', '3G')
+    .config('spark.driver.cores', 1)
+    .config('spark.executor.memory', '4G')
     .config('spark.executor.cores', 1)
     .config('spark.default.parallelism', 10)
     .config('spark.sql.shuffle.partitions', 10)
@@ -125,6 +127,8 @@ extract('/home/work/ml-1m.zip', '/home/work/')
 # %%
 ratings_df = pd_parse_ratings('/home/work/ml-1m/ratings.dat').repartition(10)
 movies_df = pd_parse_movies('/home/work/ml-1m/movies.dat').repartition(10)
+ratings_df.persist()
+movies_df.persist()
 
 
 # %%
@@ -138,7 +142,6 @@ movies_df.toPandas()
 # %%
 train_df, test_df = ratings_df.randomSplit([0.6, 0.4], seed=12345)
 train_df.persist()
-movies_df.persist()
 
 # %% [markdown]
 # ## レコメンドモデル (ALS) 定義
@@ -237,6 +240,7 @@ users = (
     .distinct()
     .filter(F.col('userId') == 55)
 )
+users.persist()
 
 
 # %%
@@ -258,9 +262,20 @@ users.toPandas()
 # ### レコメンド結果確認
 
 # %%
-(
+recommend = (
     best_model
-    .recommendForUserSubset(users, 10)
+    .recommendForUserSubset(users, 20)
+)
+recommend.persist()
+
+
+# %%
+recommend.toPandas()
+
+
+# %%
+(
+    recommend
     .withColumn('temp', F.explode('recommendations'))
     .select(
         'userId',
@@ -269,7 +284,7 @@ users.toPandas()
     )
     .join(movies_df, ['movieId'], 'inner')
     .orderBy(F.desc('rating'))
-    .show(truncate=False)
+    .toPandas()
 )
 
 

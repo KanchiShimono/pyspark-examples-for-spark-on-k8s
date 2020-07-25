@@ -322,7 +322,7 @@ raw_df = (
     .schema(schema)
     .json(WIKI_JSON_PATH)
     .select('id', 'url', 'title', 'text')
-    .repartition(spark.conf.get('spark.sql.shuffle.partitions'))
+    .repartition(int(spark.conf.get('spark.sql.shuffle.partitions')))
 )
 
 # %%

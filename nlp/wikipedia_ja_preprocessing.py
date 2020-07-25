@@ -14,6 +14,7 @@ from typing import Any, Callable, List, Optional
 import MeCab
 import pyspark.sql.functions as F
 import pyspark.sql.types as T
+from pyspark.ml.feature import StopWordsRemover
 from pyspark.sql import DataFrame as SDF
 from pyspark.sql import SparkSession
 from pyspark.sql.window import Window

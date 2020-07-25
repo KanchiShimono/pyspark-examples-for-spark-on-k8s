@@ -24,7 +24,7 @@ NUM_CPU = multiprocessing.cpu_count() - 1
 WIKI_DATA_URL = 'https://dumps.wikimedia.org/jawiki/latest/jawiki-latest-pages-articles.xml.bz2'
 WIKI_JSON_PATH = 's3://bucket/path/to/json/'
 WIKI_PARQUET_PATH = 's3://bucket/path/to/parquet/'
-MECAB_DICT = '/path/to/neologd/'
+MECAB_DICT = '/usr/lib/x86_64-linux-gnu/mecab/dic/mecab-ipadic-neologd'
 OUTPUT_PATH = 's3://bucket/path/to/final/output/'
 
 # %% [markdown]
@@ -68,7 +68,7 @@ def tokenize(
     if dict_path is None:
         mecab_arg = '-Ochasen'
     else:
-        mecab_arg = '-Ochasen -d {}'.format(dict_path)
+        mecab_arg = '-Ochasen -r /dev/null -d {}'.format(dict_path)
 
     def _tokenize(sentence: str) -> List[str]:
         tagger = MeCab.Tagger(mecab_arg)

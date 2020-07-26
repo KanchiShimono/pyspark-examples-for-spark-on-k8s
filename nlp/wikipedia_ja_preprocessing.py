@@ -22,10 +22,10 @@ from pyspark.sql.window import Window
 # %%
 NUM_CPU = multiprocessing.cpu_count() - 1
 WIKI_DATA_URL = 'https://dumps.wikimedia.org/jawiki/latest/jawiki-latest-pages-articles.xml.bz2'
-WIKI_JSON_PATH = 's3://bucket/path/to/json/'
-WIKI_PARQUET_PATH = 's3://bucket/path/to/parquet/'
+WIKI_JSON_PATH = 's3a://bucket/path/to/json/'
+WIKI_PARQUET_PATH = 's3a://bucket/path/to/parquet/'
 MECAB_DICT = '/usr/lib/x86_64-linux-gnu/mecab/dic/mecab-ipadic-neologd'
-OUTPUT_PATH = 's3://bucket/path/to/final/output/'
+OUTPUT_PATH = 's3a://bucket/path/to/final/output/'
 
 # %% [markdown]
 # ## 関数定義
@@ -304,6 +304,8 @@ spark = (
     .config('spark.eventLog.compress', True)
     .config('spark.eventLog.enabled', True)
     .config('spark.eventLog.dir', 'file:///tmp/spark-events')
+    .config('spark.jars.packages', 'org.apache.hadoop:hadoop-aws:2.7.3')
+    .config('spark.hadoop.mapreduce.outputcommitter.factory.scheme.s3a', 'org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory')
     .getOrCreate()
 )
 
